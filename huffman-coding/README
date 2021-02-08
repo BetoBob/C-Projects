@@ -1,0 +1,90 @@
+Program: hencode & hdecode
+Author: Robert Hensley
+
+hencode -- compresses file with Huffman codes 
+
+    SYNOPSIS
+        hencode infile [ outfile ] ( OF_name )
+
+    DESCRIPTION
+        • takes a command line argument that is the name of the file to be compressed
+        • takes a second (optional) command line argument that is the name of the outfile. 
+            • if this argument is missing, the output will go to stdout
+        • returns a binary Huffman-coded file that's encoded by it's input
+
+hdecode -- uncompresses an hcoded file to it's original fomrmat
+
+    SYNOPSIS
+        hdecode [ ( infile | - ) [ outfile ] ]
+
+    DESCRIPTION
+        • takes an optional command line argument that is the name of the file to be uncompressed
+            • if this argument is missing, or if the input file name is “-”, hdecode will take its input from standard input
+        • takes a second (optional) command line argument that is the name of the output file
+            • if this argument is missing, the output will go to stdout
+        • returns the original decoded output of it's input
+
+I. Logic
+
+    hencode
+        1. read in a file (using unbuffered I/O)
+        2. hash the frequency of each character
+        3. build a huffman tree of the frequency of words
+        4. write the huffman tree in hex into a .huff file
+        5. read the file again; this time writing each character into the file
+
+    hdecode
+        1. read a .huff file
+        2. reconstruct the huffman tree (calling the same builder function)
+        3. open the outfile for writing
+        4. write to the file using the series of 1's and 0's to traverse the huffman tree
+
+II. Data structures
+
+- a hash map will be created to store the counts of each ASCII char
+    - it will be of size 256 so each ASCII char has a unique bin (there are no collisions)
+- each bin contains a pointer to a hnode which containts the following properties
+    int ASCII;                  /* int ASCII value */
+    int freq;                   /* number of time ASCII value appears */
+    char path[ASCII_VALS];       /* path of 0's and 1's in binary indicating it's position in the tree */
+    hnode * left;               /* the left element in the tree */
+    hnode * right;              /* the right element in the tree */
+    hnode * link;               /* link to next element in sorted linked list (for building) */
+    hnode * org_link;           /* link to next element in sorted linked list (for after building) */
+- the huffman tree will be build from sorted hnodes
+- <stdint>
+    - to best represent hex ints, I will write uint16_t integers to the out file
+    - each integer will be 4 bytes (with 4 bits each)
+
+III. Algorithms
+
+- I will always be sorting into a sorted list
+    - insertion sort will be used (because each case will always be O(1) )
+- the worst (and rarest) huffman would require (n - 1) traverals (a tree with no balance)
+    - this would be 255 traversals (this is an acceptable amount of recurssion)
+
+IV. Methods
+
+    Unbuffered I/O Functions
+        - read in file
+        - write to hex file             [hencode]
+        - write to text file            [hdecode]
+        - print results (for htable)    [htable]
+
+    hnode methods
+        - new_hnode(hnode contents)
+        - insert_sort(linked list, hnode) 
+        - huff_build(hnode)
+        - path_creator(hnode huff)      [hencode]
+        - huff_traverse(hnode huff)     [hdecode]
+
+V. Testing
+	I. Unit Tests: 
+        - test each of the individual methods aboves
+    II. System Tests
+        - test the small strings of text given in the Lab/Asignment Specs
+            - build and traverse the huffman trees for these strings by hand
+            - confirm that the intructor output matches
+        - test building huffman tree on sufficiently large files (like the unix dictionary)
+        - test with a file that contains every ASCII character
+        - diff results with instructor output 
